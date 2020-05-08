@@ -12,26 +12,52 @@ import (
 //todo  text NOT NULL
 //)'
 
-
-
-type Todo struct{
-	todo []string
+type Todos struct {
+	repo Repo
 }
-type TodoTmp struct{
-	id int
+type TodoTmp struct {
+	id   int
 	todo string
 }
+type Repo interface {
+	GetAll() []string
+	Create(todo string)
+}
 
-func (todo *Todo)Create(s string){
-	ifExist:=true
-	for _,t:=range GetAll(){
-		if s==t {
-			ifExist=false
+//func NewTodo(repo Repo) *Todo{
+//	return &Todo{repo: repo}
+//}
+func NewTodos(repo Repo) *Todos {
+	return &Todos{repo: repo}
+}
+func (t *Todos) Create(todo string) {
+	t.repo.Create(todo)
+}
+func (t *Todos) GetAll() []string {
+	return t.repo.GetAll()
+}
+
+type ToBase struct {
+	todo []string
+}
+type ToLocal struct {
+	todo []string
+}
+
+func (todo *ToLocal) Create(s string) {
+	todo.todo = append(todo.todo, s)
+	return
+}
+func (todo *ToBase) Create(s string) {
+	ifExist := true
+	for _, t := range GetAll() {
+		if s == t {
+			ifExist = false
 			fmt.Println("Such todo is already exist in todoList")
 			break
 		}
 	}
-	if ifExist{
+	if ifExist {
 		connStr := "user=postgres password=rose20 dbname=postgres sslmode=disable"
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
@@ -39,19 +65,18 @@ func (todo *Todo)Create(s string){
 		}
 		defer db.Close()
 
-		db.Exec("insert into todos (todo) values ($1)",s)
-		if err != nil{
+		db.Exec("insert into todos (todo) values ($1)", s)
+		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Created: ",s)
+		fmt.Println("Created: ", s)
 	}
 }
 
-func (todo *Todo)ShowAll(){
-	fmt.Println(todo.todo)
+func (todo *ToLocal) GetAll() []string {
+	return todo.todo
 }
-
-func (todo *Todo)GetAll()[]string{
+func (todo *ToBase) GetAll() []string {
 	connStr := "user=postgres password=rose20 dbname=postgres sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -59,14 +84,14 @@ func (todo *Todo)GetAll()[]string{
 	}
 	defer db.Close()
 
-	rows,err:=db.Query("select * from todos")
+	rows, err := db.Query("select * from todos")
 	if err != nil {
 		panic(err)
 	}
-	for rows.Next(){
+	for rows.Next() {
 		t := TodoTmp{}
-		err := rows.Scan(&t.id,&t.todo)
-		if err != nil{
+		err := rows.Scan(&t.id, &t.todo)
+		if err != nil {
 			fmt.Println(err)
 			continue
 		}
@@ -75,7 +100,7 @@ func (todo *Todo)GetAll()[]string{
 	return todo.todo
 }
 
-func (todo *Todo)ClearAllDb(){
+func (todo *Todos) ClearAllDb() {
 	connStr := "user=postgres password=rose20 dbname=postgres sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -85,7 +110,7 @@ func (todo *Todo)ClearAllDb(){
 	db.Exec("delete from todos")
 }
 
-func GetAll()[]string{
+func GetAll() []string {
 	connStr := "user=postgres password=rose20 dbname=postgres sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -93,20 +118,20 @@ func GetAll()[]string{
 	}
 	defer db.Close()
 
-	rows,err:=db.Query("select * from todos")
+	rows, err := db.Query("select * from todos")
 	if err != nil {
 		panic(err)
 	}
 	var tmp []string
-	for rows.Next(){
+	for rows.Next() {
 		t := TodoTmp{}
-		err := rows.Scan(&t.id,&t.todo)
-		if err != nil{
+		err := rows.Scan(&t.id, &t.todo)
+		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		tmp= append(tmp, t.todo)
+		tmp = append(tmp, t.todo)
 	}
 	return tmp
 }
